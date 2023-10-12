@@ -95,6 +95,7 @@ use Jumbojett\OpenIDConnectClient;
 
             // Parse fields
             $uid = $user[$RCMAIL->config->get('oidc_field_uid')];
+            $mail = $uid;
             $password = get($user[$RCMAIL->config->get('oidc_field_password')], $password);
             $imap_server = get($user[$RCMAIL->config->get('oidc_field_server')], $imap_server);
 
@@ -120,6 +121,19 @@ use Jumbojett\OpenIDConnectClient;
 
             // Login to IMAP
             if ($RCMAIL->login($auth['user'], $password, $imap_server, $auth['cookiecheck'])) {
+                // Update user profile
+                $iid = $RCMAIL->user->get_identity()['identity_id'];
+                if (isset($iid)) {
+                    $data = array('email' => $mail);
+
+                    $claim_name = $user['name'];
+                    if (isset($claim_name)) {
+                        $data['name'] = $claim_name;
+                    }
+
+                    $RCMAIL->user->update_identity($iid, $data);
+                }
+
                 $RCMAIL->session->remove('temp');
                 $RCMAIL->session->regenerate_id(false);
                 $RCMAIL->session->set_auth_cookie();
@@ -131,13 +145,6 @@ use Jumbojett\OpenIDConnectClient;
                 $OUTPUT = new rcmail_html_page();
                 $redir = $RCMAIL->plugins->exec_hook('login_after', $query + array('_task' => 'mail'));
                 $RCMAIL->session->set_auth_cookie();
-
-                // Update user profile
-                $iid = $RCMAIL->user->get_identity()['identity_id'];
-                $claim_name = $user['name'];
-                if (isset($iid) && isset($claim_name)) {
-                    $RCMAIL->user->update_identity($iid, array('name' => $claim_name));
-                }
 
                 $OUTPUT->redirect($redir, 0, true);
             } else {
