@@ -23,6 +23,7 @@ use Jumbojett\OpenIDConnectClient;
             $this->load_config('config.inc.php.dist');
             $this->load_config('config.inc.php');
             $this->add_hook('template_object_loginform', array($this, 'loginform'));
+            $this->add_hook('logout_after', array($this, 'logout_after'));
         }
 
         function altReturn($ERROR) {
@@ -37,6 +38,19 @@ use Jumbojett\OpenIDConnectClient;
                 include $altLogin;
                 exit;
             }
+        }
+
+        function logout_after() {
+            $RCMAIL = rcmail::get_instance();
+
+            $oidc = new OpenIDConnectClient(
+                $RCMAIL->config->get('oidc_url'),
+                $RCMAIL->config->get('oidc_client'),
+                $RCMAIL->config->get('oidc_secret')
+            );
+
+            // TODO: We could save idToken during login and use it here
+            $oidc->signOut(null, null);
         }
 
         public function loginform($content) {
@@ -65,6 +79,7 @@ use Jumbojett\OpenIDConnectClient;
                 $RCMAIL->config->get('oidc_client'),
                 $RCMAIL->config->get('oidc_secret')
             );
+            $oidc->setRedirectURL($oidc->getRedirectURL() . '/');
             $oidc->addScope($RCMAIL->config->get('oidc_scope'));
 
             // Get user information
@@ -82,6 +97,12 @@ use Jumbojett\OpenIDConnectClient;
             $uid = $user[$RCMAIL->config->get('oidc_field_uid')];
             $password = get($user[$RCMAIL->config->get('oidc_field_password')], $password);
             $imap_server = get($user[$RCMAIL->config->get('oidc_field_server')], $imap_server);
+
+            if (!$uid) {
+                $content['content'] .= "<p class='alert-danger'> User ID (mail) not provided. </p>";
+                $this->altReturn($ERROR);
+                return $content;
+            }
 
             // Check if master user is present
             $master = $RCMAIL->config->get('oidc_config_master_user');
