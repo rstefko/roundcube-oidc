@@ -54,13 +54,22 @@ use Jumbojett\OpenIDConnectClient;
         }
 
         public function loginform($content) {
-            // Add the login link
-            $content['content'] .= "<p> <a href='?oidc=1'> Login with OIDC </a> </p>";
+            // Get mail object
+            $RCMAIL = rcmail::get_instance();
+            $auto_redirect = $RCMAIL->config->get('oidc_auto_redirect');
 
-            // Check if we are starting or resuming oidc auth
-            if (!isset($_GET['code']) && !isset($_GET['oidc'])) {
-                $this->altReturn(null);
-                return $content;
+            if ($auto_redirect === true) {
+                $content['content'] = '';
+            }
+            else {
+                // Add the login link
+                $content['content'] .= "<p> <a href='?oidc=1'> Login with OIDC </a> </p>";
+
+                // Check if we are starting or resuming oidc auth
+                if (!isset($_GET['code']) && !isset($_GET['oidc'])) {
+                    $this->altReturn(null);
+                    return $content;
+                }
             }
 
             // Define error for alt login
@@ -122,8 +131,9 @@ use Jumbojett\OpenIDConnectClient;
             // Login to IMAP
             if ($RCMAIL->login($auth['user'], $password, $imap_server, $auth['cookiecheck'])) {
                 // Update user profile
-                $iid = $RCMAIL->user->get_identity()['identity_id'];
-                if (isset($iid)) {
+                $user_identity = $RCMAIL->user->get_identity();
+                $iid = $user_identity['identity_id'];
+                if (isset($iid) && (!$user_identity['name'] || $user_identity['email'] == $uid)) {
                     $data = array('email' => $mail);
 
                     $claim_name = $user['name'];
