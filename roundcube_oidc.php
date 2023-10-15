@@ -82,12 +82,19 @@ use Jumbojett\OpenIDConnectClient;
             $password = $RCMAIL->config->get('oidc_imap_master_password');
             $imap_server = $RCMAIL->config->get('default_host');
 
+            // Try to decrypt login_hint cookie
+            $login_hint = $RCMAIL->decrypt($_COOKIE['roundcube_oidc_login_hint']);
+            if ($login_hint === false) {
+                $login_hint = null;
+            }
+
             // Build provider
             $oidc = new OpenIDConnectClient(
                 $RCMAIL->config->get('oidc_url'),
                 $RCMAIL->config->get('oidc_client'),
                 $RCMAIL->config->get('oidc_secret')
             );
+            $oidc->addAuthParam(['login_hint' => $login_hint]);
             $oidc->setRedirectURL($oidc->getRedirectURL() . '/');
             $oidc->addScope(explode(' ', $RCMAIL->config->get('oidc_scope')));
 
@@ -130,6 +137,8 @@ use Jumbojett\OpenIDConnectClient;
 
             // Login to IMAP
             if ($RCMAIL->login($auth['user'], $password, $imap_server, $auth['cookiecheck'])) {
+                rcube_utils::setcookie('roundcube_oidc_login_hint', $RCMAIL->encrypt($mail));
+
                 // Update user profile
                 $user_identity = $RCMAIL->user->get_identity();
                 $iid = $user_identity['identity_id'];
