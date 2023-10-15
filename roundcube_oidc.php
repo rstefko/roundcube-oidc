@@ -89,12 +89,12 @@ use Jumbojett\OpenIDConnectClient;
                 $RCMAIL->config->get('oidc_secret')
             );
             $oidc->setRedirectURL($oidc->getRedirectURL() . '/');
-            $oidc->addScope($RCMAIL->config->get('oidc_scope'));
+            $oidc->addScope(explode(' ', $RCMAIL->config->get('oidc_scope')));
 
             // Get user information
             try {
                 $oidc->authenticate();
-                $user = json_decode(json_encode($oidc->requestUserInfo()), true);
+                $user = json_decode(json_encode($oidc->getVerifiedClaims()), true);
             } catch (\Exception $e) {
                 $ERROR = 'OIDC Authentication Failed <br/>' . $e->getMessage();
                 $content['content'] .= "<p class='alert-danger'> $ERROR </p>";
