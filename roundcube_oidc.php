@@ -49,6 +49,8 @@ use Jumbojett\OpenIDConnectClient;
                 $RCMAIL->config->get('oidc_secret')
             );
 
+            rcube_utils::setcookie('roundcube_oidc_login_hint', '');
+
             // TODO: We could save idToken during login and use it here
             $oidc->signOut(null, null);
         }
